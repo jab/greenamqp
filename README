@@ -1,5 +1,16 @@
 Python AMQP (Advanced Message Queuing Protocol) Client library
 
+This is a version of py-amqplib with modifications for use with eventlet.
+These changes allow concurrent use of independent channels on a single 
+connection by multiple eventlets.  The py-amqplib api is unchanged and 
+can be used as normal.
+
+
+See:
+http://code.google.com/p/py-amqplib/
+http://eventlet.net/
+
+
 For more information about AMQP, visit
 
     http://www.amqp.org
