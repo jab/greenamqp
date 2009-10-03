@@ -40,7 +40,7 @@ LIBRARY_PROPERTIES = {
     'library_version': '0.6.1',
     }
 
-AMQP_LOGGER = logging.getLogger('amqplib')
+AMQP_LOGGER = logging.getLogger('greenamqp')
 
 def method_reader(self):
     
