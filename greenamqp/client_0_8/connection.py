@@ -19,7 +19,7 @@ AMQP 0-8 Connections
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
 import logging
-from eventlet.proc import spawn as spawn_proc
+from eventlet.proc import spawn as spawn_proc, ProcExit
 
 from abstract_channel import AbstractChannel
 from channel import Channel
@@ -43,25 +43,34 @@ LIBRARY_PROPERTIES = {
 AMQP_LOGGER = logging.getLogger('greenamqp')
 
 def method_reader(self):
-    
-    reader = MethodReader(self.transport)
-    while True:
-        if self.transport is None:
-            return
+    try:
+        reader = MethodReader(self.transport)
+        while True:
+            if self.transport is None:
+                return
         
-        channel, method_sig, args, content = \
-            reader.read_method()
+            channel, method_sig, args, content = \
+                reader.read_method()
 
-        self.channels[channel].received_method(method_sig, args, content)
+            self.channels[channel].received_method(method_sig, args, content)
 
-        #
-        # If we just queued up a method for channel 0 (the Connection
-        # itself) it's probably a close method in reaction to some
-        # error, so deal with it right away.
-        #
-        # if channel == 0:
-        #     self.wait()
-
+            #
+            # If we just queued up a method for channel 0 (the Connection
+            # itself) it's probably a close method in reaction to some
+            # error, so deal with it right away.
+            #
+            # if channel == 0:
+            #     self.wait()
+    except IOError:
+        # this will happen if the connection is closed while reading
+        pass
+    except ProcExit:
+        # killed normally
+        raise
+    except:
+        AMQP_LOGGER.error("Unexpected error reading from connection: %s" % 
+                          traceback.format_exc())
+    
 class Connection(AbstractChannel):
     """
     The connection class provides methods for a client to establish a
@@ -175,6 +184,7 @@ class Connection(AbstractChannel):
 
     def _do_close(self):
         self.method_reader_proc.kill()
+        self.method_reader.wait()
         self.method_reader_proc = None
 
         self.transport.close()
