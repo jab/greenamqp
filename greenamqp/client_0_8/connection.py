@@ -184,7 +184,7 @@ class Connection(AbstractChannel):
 
     def _do_close(self):
         self.method_reader_proc.kill()
-        self.method_reader.wait()
+        self.method_reader_proc.wait()
         self.method_reader_proc = None
 
         self.transport.close()
