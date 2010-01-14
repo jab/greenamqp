@@ -65,8 +65,7 @@ def method_reader(self):
         # this will happen if the connection is closed while reading
         pass
     except ProcExit:
-        # killed normally
-        raise
+        pass
     except:
         AMQP_LOGGER.error("Unexpected error reading from connection: %s" % 
                           traceback.format_exc())
