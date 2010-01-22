@@ -1,0 +1,3 @@
+*.pyc
+greenamqp.egg-info
+*.swp

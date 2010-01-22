@@ -19,7 +19,8 @@ AMQP 0-8 Connections
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
 import logging
-from eventlet.proc import spawn as spawn_proc, ProcExit
+from eventlet import spawn
+from eventlet.support.greenlets import GreenletExit
 
 from abstract_channel import AbstractChannel
 from channel import Channel
@@ -53,18 +54,10 @@ def method_reader(self):
                 reader.read_method()
 
             self.channels[channel].received_method(method_sig, args, content)
-
-            #
-            # If we just queued up a method for channel 0 (the Connection
-            # itself) it's probably a close method in reaction to some
-            # error, so deal with it right away.
-            #
-            # if channel == 0:
-            #     self.wait()
     except IOError:
         # this will happen if the connection is closed while reading
         pass
-    except ProcExit:
+    except GreenletExit:
         pass
     except:
         AMQP_LOGGER.error("Unexpected error reading from connection: %s" % 
@@ -154,7 +147,7 @@ class Connection(AbstractChannel):
             self.method_writer = MethodWriter(self.transport, self.frame_max)
 
             # fire up the reader
-            self.method_reader_proc = spawn_proc(method_reader, self)
+            self.method_reader_proc = spawn(method_reader, self)
 
             self.wait(allowed_methods=[
                     (10, 10), # start
@@ -172,6 +165,7 @@ class Connection(AbstractChannel):
             host = self._x_open(virtual_host, insist=insist)
             if host is None:
                 # we weren't redirected
+                AMQP_LOGGER.debug("Successfully opened new connection %s." % self)
                 return
 
             # we were redirected, close the socket, loop and try again
@@ -180,20 +174,26 @@ class Connection(AbstractChannel):
             except Exception:
                 pass
 
+                
+
 
     def _do_close(self):
-        self.method_reader_proc.kill()
-        self.method_reader_proc.wait()
-        self.method_reader_proc = None
+        try:
+            self.method_reader_proc.kill()
+            self.method_reader_proc.wait()
+            self.method_reader_proc = None
 
-        self.transport.close()
-        self.transport = None
+            self.transport.close()
+            self.transport = None
 
-        temp_list = [x for x in self.channels.values() if x is not self]
-        for ch in temp_list:
-            ch._do_close()
+            temp_list = [x for x in self.channels.values() if x is not self]
+            for ch in temp_list:
+                ch._do_close()
 
-        self.connection = self.channels = None
+            self.connection = self.channels = None
+            AMQP_LOGGER.debug("Successfully closed connection %s." % self)
+        except: 
+            log.debug("Problem closing transport: %s" % traceback.format_exc())
 
 
     def _get_free_channel_id(self):

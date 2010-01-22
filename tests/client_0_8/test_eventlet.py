@@ -7,19 +7,14 @@ import settings
 from greenamqp.client_0_8 import Connection, Message
 
 class TestEventlet(unittest.TestCase):
-    def setUp(self):
-        self.conn = Connection(**settings.connect_args)
-
-    def tearDown(self):
-        if self.conn:
-            self.conn.close()
 
     def test_eventlet_per_channel(self):        
-        from eventlet.proc import spawn, waitall
-        from eventlet.coros import event
-        from eventlet.api import sleep
+        from eventlet import spawn, sleep
+        from eventlet.event import Event
         
-        start_engines = event()
+        conn = Connection(**settings.connect_args)
+        
+        start_engines = Event()
         messages_to_send = 75
 
         def make_message(routing_key, i):
@@ -28,7 +23,7 @@ class TestEventlet(unittest.TestCase):
         def writer(channel_id, routing_key, read_ready):
             start_engines.wait()    
 
-            chan = self.conn.channel(channel_id)
+            chan = conn.channel(channel_id)
             read_ready.wait()
         
             for i in range(messages_to_send):
@@ -44,7 +39,7 @@ class TestEventlet(unittest.TestCase):
     
             start_engines.wait()
             
-            chan = self.conn.channel(channel_id)
+            chan = conn.channel(channel_id)
             chan.queue_declare(queue=routing_key, exclusive=True)
             chan.queue_bind(routing_key, exchange='amq.direct', routing_key=routing_key)
             chan.basic_consume(queue=routing_key, callback=got_message)
@@ -62,18 +57,24 @@ class TestEventlet(unittest.TestCase):
         # via separate channels.
         pairs = 25
         procs = []
-        ch = self.conn.channel(pairs*2 + 2)
+        ch = conn.channel(pairs*2 + 2)
         for i in range(1, pairs + 1):
             key = 'q_%d' % i
             
-            read_ready = event()
+            read_ready = Event()
             procs.append(spawn(writer, i, key, read_ready))
             procs.append(spawn(reader, i + pairs, key, read_ready))
-    
+
         # tell them to begin...
         start_engines.send(True)
 
-        waitall(procs)
+        for proc in procs:
+            proc.wait()
+
+        conn.close()
+        
+
+        
         
 def main():
     suite = unittest.TestLoader().loadTestsFromTestCase(TestEventlet)

@@ -21,7 +21,7 @@ Read/Write AMQP frames over network transports.
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
 from eventlet.green import socket
-from eventlet.coros import semaphore
+from eventlet.semaphore import BoundedSemaphore
 #
 # See if Python 2.6+ SSL support is available
 #
@@ -45,6 +45,8 @@ class _AbstractTransport(object):
 
     """
     def __init__(self, host, connect_timeout):
+        self.sock = None
+
         if ':' in host:
             host, port = host.split(':', 1)
             port = int(port)
@@ -132,8 +134,8 @@ class _GreenAbstractTransport(_AbstractTransport):
     operation.
     """
     def __init__(self, *args, **kw):
-        self._green_read_lock = semaphore(1, 1)
-        self._green_write_lock = semaphore(1, 1)
+        self._green_read_lock = BoundedSemaphore(1, 1)
+        self._green_write_lock = BoundedSemaphore(1, 1)
         _AbstractTransport.__init__(self, *args, **kw)
 
     def read_frame(self):

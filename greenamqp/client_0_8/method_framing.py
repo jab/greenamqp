@@ -18,7 +18,7 @@ Convert between frames and higher-level AMQP methods
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
-from Queue import Empty, Queue
+from eventlet.queue import Empty, Queue
 from struct import pack, unpack
 
 try:
