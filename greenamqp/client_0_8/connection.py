@@ -43,6 +43,9 @@ LIBRARY_PROPERTIES = {
 
 AMQP_LOGGER = logging.getLogger('greenamqp')
 
+DEBUG_LEAKS = False
+connection_count = 0
+
 def method_reader(self):
     try:
         reader = MethodReader(self.transport)
@@ -120,7 +123,6 @@ class Connection(AbstractChannel):
             d.update(client_properties)
 
         self.known_hosts = ''
-
         while True:
             self.channels = {}
             # The connection object itself is treated as channel 0
@@ -166,6 +168,9 @@ class Connection(AbstractChannel):
             if host is None:
                 # we weren't redirected
                 AMQP_LOGGER.debug("Successfully opened new connection %s." % self)
+                if DEBUG_LEAKS:
+                    global connection_count
+                    connection_count += 1
                 return
 
             # we were redirected, close the socket, loop and try again
@@ -192,6 +197,9 @@ class Connection(AbstractChannel):
 
             self.connection = self.channels = None
             AMQP_LOGGER.debug("Successfully closed connection %s." % self)
+            if DEBUG_LEAKS:
+                global connection_count
+                connection_count -= 1
         except: 
             log.debug("Problem closing transport: %s" % traceback.format_exc())
 
