@@ -19,7 +19,7 @@ Code common to Connection and Channel objects.
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 
 from serialization import AMQPWriter
-from eventlet.coros import event
+from eventlet.event import Event
 
 __all__ =  [
             'AbstractChannel',
@@ -40,7 +40,7 @@ class AbstractChannel(object):
         self.channel_id = channel_id
         connection.channels[channel_id] = self
         self.method_queue = [] # Higher level queue for methods
-        self.new_method = event()
+        self.new_method = Event()
         self.auto_decode = False
     
 

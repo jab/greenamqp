@@ -23,6 +23,6 @@ setup(name = "greenamqp",
       author = "Luke Tucker",
       author_email = "ltucker@openplans.org",
       url = "http://github.com/ltucker/greenamqp",
-      install_requires=['eventlet'],
+      install_requires=['eventlet>=0.9.3'],
       packages = ['greenamqp', 'greenamqp.client_0_8']
      )
